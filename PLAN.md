@@ -102,9 +102,10 @@ com.lee.pragent
 |---|---|
 | 1 | pr-agent 在 PR #1 上跑 Agent 模式，用 eval 算召回 |
 | 2 | 整理对比表：召回（按 eval 的分段）、外层 / 内层 token、墙钟时间、工具调用次数、轮数；Agent 编排损失（dropped / fabricated / altered / unreviewed / repeated）；同时列出 `rawFindings` 的召回，用来区分"审漏了"和"汇总时丢了" |
-| 3 | mapreduce / single 用 SESSION 第 6 节记录的基线（17/19、14/19）；如果 A3 改动后 headSha 或 pr-reviewer 行为有变，就重跑 |
+| 3 | 第 1 步跑 3 次，记录每次结果和范围 |
+| 4 | mapreduce / single 用 SESSION 第 6 节记录的基线（17/19、14/19）；如果 A3 改动后 headSha 或 pr-reviewer 行为有变，就重跑 |
 
-**验收**：对比表填完，结论写清楚。
+**验收**：对比表和结论写进 `RESULTS.md`。
 
 ---
 
@@ -117,8 +118,8 @@ com.lee.pragent
 
 ---
 
-## 待你确认
+## 已确认（2026-10-02）
 
-1. **A4 对比表放在哪**：建议新建 `pr-agent/RESULTS.md`，同时在 `pr-agent-SESSION.md` 里放链接。
-2. **A4 跑几次**：temperature=0 时 Agent 的路径也可能不同。建议跑 3 次，记录每次的结果和范围；只跑 1 次也行，但结论会比较弱。
-3. **A2 第 4 步的历史回滚**：外层调用失败时，把对话历史退回到本条指令之前。DESIGN 第 9 节只写了"对话历史保留"，这一步是为了保证保留下来的历史还能继续用，属于对 DESIGN 的补充。确认后我同步写进 DESIGN 第 9 节。
+1. **A4 对比表**：新建 `pr-agent/RESULTS.md`，`pr-agent-SESSION.md` 里放链接。
+2. **A4 运行次数**：Agent 模式在 PR #1 上跑 3 次，记录每次结果和范围。
+3. **外层调用失败时的历史**：退回到本条指令之前（已写进 DESIGN 第 9 节）。
