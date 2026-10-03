@@ -26,7 +26,7 @@
 | A1 骨架 + 配置 + MCP 客户端 | ✅ 启动列出 3 个工具；核实结果见 DESIGN §14 |
 | A2 AgentLoop + ConsolePrinter + REPL | ✅ PR #1 真实跑通：4 轮 · 13 次工具调用 · 外层 in 20,605 / out 4,386 · 内层 in 29,067 / out 2,210 · 63.5s |
 | A3 报告 + /save + pr-reviewer 改动 | ✅ PR #1 自动生成报告，eval 召回 17/19（89.5%）；本次无编排损失（dropped / fabricated / altered / unreviewed / repeated 均为 0）。pr-reviewer 改动提交在其 `m4-mapreduce` 分支 `3aa6cab` |
-| A4 三种模式对比 | 未开始 |
+| A4 三种模式对比 | ✅ 见 [RESULTS.md](RESULTS.md)：Agent 召回 16～17/19（mapreduce 17、single 14），3 次编排损失均为 0；输入 token 约为 mapreduce 的 1.7 倍，墙钟约 60s（mapreduce 约 9s） |
 
 A1 已完成：pom、配置、`McpToolGateway`、启动打印工具。`config/application.yml` 已建好模板，`llm.api-key` 用户已填写。`McpToolGateway.call` 推迟到 A2 与 AgentLoop 一起实现。
 
