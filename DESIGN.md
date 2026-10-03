@@ -305,7 +305,13 @@ llm:
 
 ## 14. 写代码时需要核实的点
 
-- Spring AI 1.1.8 关闭自动执行工具的方式（`ToolCallingChatOptions` 的 `internalToolExecutionEnabled`）及工具调用消息的构造方式。
-- Spring AI MCP 客户端是否给工具名加前缀；过滤 `review_pr` 以实际名称为准。
-- MCP 客户端 starter 是否自动注册 `ToolCallbackProvider` bean、是否会被 ChatClient 自动收集；本工程只在调用时显式传入 3 个工具。
-- pr-reviewer `eval` 对未知字段的处理（第 11 节第 3 条）。
+- Spring AI 1.1.8 关闭自动执行工具的方式（`ToolCallingChatOptions` 的 `internalToolExecutionEnabled`）及工具调用消息的构造方式。（A2 核实）
+- ~~Spring AI MCP 客户端是否给工具名加前缀~~ **已核实（A1）**：自动配置注册 `DefaultMcpToolNamePrefixGenerator`，只去掉非法字符，仅在重名时加 `alt_N_`；实际工具名为 `list_pr_files` / `review_file` / `aggregate_findings` / `review_pr`，无前缀。
+- ~~MCP 客户端 starter 是否自动注册 `ToolCallbackProvider` bean~~ **已核实（A1）**：自动注册 `SyncMcpToolCallbackProvider`（内部缓存 listTools 结果）。本工程直接用 ChatModel、显式传入 3 个工具，不经过 ChatClient 的自动收集。
+- pr-reviewer `eval` 对未知字段的处理（第 11 节第 3 条）。（A3 核实；eval 用 Spring 注入的 `ObjectMapper`，Boot 默认忽略未知字段）
+
+A1 期间发现、A2 要用的事实（来自 `spring-ai-mcp` 1.1.8 源码）：
+- `SyncMcpToolCallback.call`：MCP 返回 `isError=true` 或调用异常时抛 `ToolExecutionException`；参数不是合法 JSON 时 `jsonToMap` 直接抛异常；正常时返回 MCP `content` 列表的 JSON（需取出其中 text）。
+- MCP 客户端 `request-timeout` 默认 20s，`review_file` 内部 LLM 调用最长 120s 且会重试，已在 `application.yml` 调为 10m。
+- 启动失败时 MCP stdio 传输的读线程不是守护线程，JVM 不退出；`main` 中捕获启动异常后 `System.exit(1)`。
+- 子进程命令用 `${java.home}/bin/java`，保证与 pr-agent 用同一个 JDK（PATH 上的 `java` 不一定是 21）。

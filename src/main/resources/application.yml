@@ -1,0 +1,60 @@
+# C# 对照：application.yml ≈ appsettings.json
+# ${ENV_VAR:默认值} 表示从环境变量读取（≈ 环境变量覆盖 appsettings 的配置提供程序）。
+# 不要在本文件里写真实密钥：本地 key 写在 ./config/application.yml（被 .gitignore 排除，Spring Boot 自动加载）。
+
+spring:
+  main:
+    web-application-type: none   # 不启动 Web 服务（≈ 用 Host 而不是 WebApplication）
+    banner-mode: off             # stdout 只留给 REPL 交互输出
+    log-startup-info: false
+  ai:
+    openai:                      # 外层 Agent 的 DeepSeek（OpenAI 兼容接口）
+      base-url: ${llm.base-url}
+      api-key: ${llm.api-key}
+      chat:
+        options:
+          model: ${llm.model}
+          temperature: 0
+    retry:
+      max-attempts: 3            # 外层 API 出错最多尝试 3 次
+    model:
+      # 只用 chat，关闭 OpenAI starter 顺带装配的其他模型
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    mcp:
+      client:
+        name: pr-agent
+        type: SYNC
+        # 默认 20s。review_file 内部一次 LLM 调用最长 120s 且可能重试，20s 会超时
+        request-timeout: 10m
+        stdio:
+          connections:
+            pr-reviewer:         # 把 pr-reviewer.jar 以 MCP server 方式拉起为子进程（≈ Process.Start + 读写 stdin/stdout）
+              command: ${java.home}/bin/java   # 与 pr-agent 用同一个 JDK（PATH 上的 java 不一定是 21）
+              args:
+                - -jar
+                - ${agent.pr-reviewer.jar}
+                - mcp
+                - --spring.config.additional-location=file:${agent.pr-reviewer.config-dir}
+
+logging:
+  file:
+    # 日志除 stderr 外还写这个文件（见 logback-spring.xml）
+    name: ${user.home}/.pr-agent/pr-agent.log
+
+llm:
+  base-url: ${LLM_BASE_URL:https://api.deepseek.com}
+  api-key: ${LLM_API_KEY:}
+  model: ${LLM_MODEL:deepseek-chat}
+
+agent:
+  max-steps: 50
+  reports-dir: reports
+  pr-reviewer:
+    # pr-reviewer 在 pr-reviewer 目录下 mvn package 生成；它自己读 DeepSeek key 和 GitHub token
+    jar: /Users/lee/Documents/spring/pr-reviewer/target/pr-reviewer.jar
+    config-dir: /Users/lee/Documents/spring/pr-reviewer/config/
