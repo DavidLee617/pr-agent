@@ -1,6 +1,8 @@
 # PR Agent 设计文档（实现用）
 
-> v1.0，2026-10-02。由与用户的设计讨论整理而成，是本工程的需求来源。
+> v1.1，2026-10-02。由与用户的设计讨论整理而成，是本工程的需求来源。
+>
+> v1.1 变更：① 第 7 节明确一个任务只涉及一个 PR（用户确认没有多 PR 场景），删去"按 prUrl 分别生成报告"；② 第 8 节配置改为与 pr-reviewer 相同的 `llm.*` 方式，修正原文"密钥从环境变量读"与"密钥放 config/application.yml"前后不一致的问题。
 
 ---
 
@@ -195,22 +197,27 @@ Agent：本次共审查 11 个文件，发现 25 个问题……
 | `repeatedReviews` | 被 `review_file` 调用超过一次的文件及次数 |
 
 - 本任务没有调用过 `aggregate_findings` 时不自动生成报告；`/save` 仍可手动保存（`findings` 为空，`rawFindings` 照常计算）。
-- 一个任务里涉及多个 PR 时，按 `prUrl` 分别生成报告。
+- **一个任务只涉及一个 PR**（可以是其中多个文件），因此每个任务至多一份报告。v1 不支持一条指令里审多个 PR。
 - `/save` 不带路径时保存最近一个任务的报告到 `reports/`；带路径时保存到指定路径。
 
 ---
 
 ## 8. 配置
 
-`src/main/resources/application.yml` 打进 jar；本地密钥放 `config/application.yml`（Spring Boot 自动加载工作目录下的 `./config/`），被 `.gitignore` 排除。
+沿用 pr-reviewer 的方式：`src/main/resources/application.yml` 打进 jar，`spring.ai.openai.*` 引用 `llm.*`，`llm.*` 默认从环境变量 `LLM_*` 读；本地的 `config/application.yml`（Spring Boot 自动加载工作目录下的 `./config/`，被 `.gitignore` 排除）直接写 `llm.*` 覆盖。两种方式任选一种。
 
 ```yaml
-spring.ai.openai:                 # 外层 Agent 的 DeepSeek；密钥从环境变量 LLM_* 读
-  base-url: ${LLM_BASE_URL:https://api.deepseek.com}
-  api-key: ${LLM_API_KEY}
+# src/main/resources/application.yml（打进 jar，不含真实值）
+spring.ai.openai:                 # 外层 Agent 的 DeepSeek
+  base-url: ${llm.base-url}
+  api-key: ${llm.api-key}
   chat.options:
-    model: ${LLM_MODEL:deepseek-chat}
+    model: ${llm.model}
     temperature: 0
+llm:
+  base-url: ${LLM_BASE_URL:https://api.deepseek.com}
+  api-key: ${LLM_API_KEY:}
+  model: ${LLM_MODEL:deepseek-chat}
 spring.ai.retry.max-attempts: 3   # 外层 API 出错最多尝试 3 次
 spring.ai.mcp.client.stdio.connections.pr-reviewer:
   command: java
@@ -220,7 +227,13 @@ agent:
   reports-dir: reports
 ```
 
-- 本工程只需要 DeepSeek key；GitHub token 由 pr-reviewer 自己读取。
+```yaml
+# config/application.yml（本地，不提交）
+llm:
+  api-key: <DeepSeek key>
+```
+
+- 本工程只需要 DeepSeek key；GitHub token 由 pr-reviewer 自己读取，**不要**写进本工程配置。
 - jar 路径、配置路径都写在配置里，不写死在代码中。
 - 日志写 stderr（和文件），stdout 只给 REPL 交互输出。
 
