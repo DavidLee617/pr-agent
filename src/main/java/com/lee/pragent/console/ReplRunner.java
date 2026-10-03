@@ -1,7 +1,9 @@
 package com.lee.pragent.console;
 
 import com.lee.pragent.agent.AgentLoop;
+import com.lee.pragent.agent.TaskRecords.TaskResult;
 import com.lee.pragent.mcp.McpToolGateway;
+import com.lee.pragent.report.TaskRecorder;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +11,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 /**
  * 终端 REPL：循环读取输入，/save /clear /exit 是命令，其余输入交给 AgentLoop。
@@ -20,10 +23,12 @@ public class ReplRunner implements CommandLineRunner {
 
     private final McpToolGateway gateway;
     private final AgentLoop agent;
+    private final TaskRecorder recorder;
 
-    public ReplRunner(McpToolGateway gateway, AgentLoop agent) {
+    public ReplRunner(McpToolGateway gateway, AgentLoop agent, TaskRecorder recorder) {
         this.gateway = gateway;
         this.agent = agent;
+        this.recorder = recorder;
     }
 
     @Override
@@ -52,11 +57,30 @@ public class ReplRunner implements CommandLineRunner {
                 continue;
             }
             if (line.equals("/save") || line.startsWith("/save ")) {
-                System.out.println("/save 将在 A3 实现");
+                String arg = line.substring("/save".length()).trim();
+                save(arg.isEmpty() ? null : Path.of(arg));
                 continue;
             }
             System.out.println();
-            agent.runTask(line);
+            TaskResult result = agent.runTask(line);
+            recorder.record(result);
+            autoSave();
+        }
+    }
+
+    private void autoSave() {
+        try {
+            recorder.autoSave().ifPresent(p -> System.out.println("   报告已自动保存：" + p));
+        } catch (IOException | RuntimeException e) {
+            System.out.println("   报告生成 / 保存失败：" + e.getMessage());
+        }
+    }
+
+    private void save(Path path) {
+        try {
+            System.out.println("报告已保存：" + recorder.save(path));
+        } catch (IOException | RuntimeException e) {
+            System.out.println("报告生成 / 保存失败：" + e.getMessage());
         }
     }
 }
