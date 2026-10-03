@@ -86,7 +86,7 @@ com.lee.pragent
 
 | # | 步骤 | 说明 |
 |---|---|---|
-| 6 | `TaskRecorder` | 实现 A2 的监听接口，记录一个任务：每轮外层 token / 耗时，每次工具调用的名称、参数、原始返回、是否出错、耗时；是否因步数上限停止；墙钟时间 |
+| 6 | `TaskRecorder` | **A2 实现时调整**：AgentLoop 已直接返回完整的 `TaskResult`（每轮 token / 耗时 / 文本、每次工具调用的名称 / 参数 / 原始返回 / 是否出错 / 耗时、状态、墙钟时间），TaskRecorder 只需保存最近一个任务的 `TaskResult` 供 `/save` 使用。原计划内容：记录一个任务：每轮外层 token / 耗时，每次工具调用的名称、参数、原始返回、是否出错、耗时；是否因步数上限停止；墙钟时间 |
 | 7 | `AgentReport` | 字段名与 `ReviewReport` 一致，另加 `agent` 对象（DESIGN 第 7 节） |
 | 8 | `ReportBuilder` | 从 `list_pr_files` 结果取 prUrl / headSha / prFiles / skippedFiles；`findings` = 各次 aggregate 结果的并集，再调一次 `aggregate_findings` 去重排序；`rawFindings` = 全部 `review_file` 原始 findings 调 `aggregate_findings` 的结果；算出 dropped / fabricated / altered（按 file+line+category 比对）、unreviewedFiles、repeatedReviews；calls 包含外层 `agent#n` 和内层 calls；token 合计 |
 | 9 | 自动保存 + `/save` | 任务调用过 aggregate 就自动保存到 `reports/agent-yyyyMMdd-HHmmss.json`；`/save [路径]` 保存最近一个任务的报告（没调过 aggregate 也能保存，`findings` 为空） |

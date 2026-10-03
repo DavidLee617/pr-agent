@@ -22,6 +22,23 @@ class McpToolGatewayTest {
         assertThat(gateway.find("review_file")).isPresent();
     }
 
+    @Test
+    void unwrapsMcpTextContent() {
+        assertThat(McpToolGateway.unwrapContent("[{\"type\":\"text\",\"text\":\"{\\\"a\\\":1}\"}]"))
+                .isEqualTo("{\"a\":1}");
+        assertThat(McpToolGateway.unwrapContent("not json")).isEqualTo("not json");
+        assertThat(McpToolGateway.unwrapContent("[1,2]")).isEqualTo("[1,2]");
+    }
+
+    @Test
+    void callRejectsNonObjectArguments() {
+        McpToolGateway gateway = new McpToolGateway(() -> new ToolCallback[]{tool("review_file")});
+
+        assertThat(gateway.call("review_file", "[]").error()).isTrue();
+        assertThat(gateway.call("review_file", "{bad").text()).contains("不是合法的 JSON");
+        assertThat(gateway.call("review_file", "{}").error()).isFalse();
+    }
+
     private static ToolCallback tool(String name) {
         ToolDefinition definition = ToolDefinition.builder().name(name).description(name).inputSchema("{}").build();
         return new ToolCallback() {
